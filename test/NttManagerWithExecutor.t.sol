@@ -83,7 +83,7 @@ contract MockExecutor is Executor {
         return new bytes(0);
     }
 
-    function createArgs(uint16 dstChain, uint256 value) public returns (ExecutorArgs memory args) {
+    function createArgs(uint16 dstChain, uint256 value) public view returns (ExecutorArgs memory args) {
         args.value = value;
         args.refundAddress = msg.sender;
         args.signedQuote = createSignedQuote(dstChain);
