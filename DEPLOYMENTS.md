@@ -11,9 +11,9 @@ Commit Hash:
 <!-- cspell:disable -->
 
 ```sh
-example-ntt-with-executor (main *)$ git rev-parse HEAD
-043ce027337e96241409ca25c240f6c9b123e282
-example-ntt-with-executor (main *)$
+example-ntt-with-executor (main)$ git rev-parse HEAD
+46e0ad7d2e3e3814d963afed80b1e1f7f774aa49
+example-ntt-with-executor (main)$
 ```
 
 <!-- cspell:enable -->
@@ -48,7 +48,7 @@ If you wish to verify that the bytecode built locally matches what is deployed o
 <!-- cspell:disable -->
 
 ```
-forge verify-bytecode <contract_addr> NttManagerWithExecutor --rpc-url <archive_node_rpc> --verifier-api-key <your_etherscan_key> --constructor-args <wormhole_chain_id> <executor_addr>
+forge verify-bytecode <contract_addr> NttManagerWithExecutor --rpc-url <archive_node_rpc> --verifier-api-key <your_etherscan_key>
 ```
 
 <!-- cspell:enable -->
