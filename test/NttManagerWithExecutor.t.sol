@@ -171,6 +171,7 @@ contract TestNttManagerWithExecutor is Test {
 
     address user_A = address(0x123);
     address user_B = address(0x456);
+    address referrer = address(0x789);
 
     function setUp() public {
         executor = new MockExecutor(chainId);
@@ -202,6 +203,7 @@ contract TestNttManagerWithExecutor is Test {
         // Give everyone some money to play with.
         vm.deal(user_A, 1 ether);
         vm.deal(user_B, 1 ether);
+        vm.deal(referrer, 1 ether);
     }
 
     function test_directTransfer() public {
@@ -231,26 +233,34 @@ contract TestNttManagerWithExecutor is Test {
         nttManager.setOutboundLimit(packTrimmedAmount(type(uint64).max, 8).untrim(decimals));
 
         vm.startPrank(user_A);
-        token.approve(address(nttManagerWithExecutor), 3 * 10 ** decimals);
+        token.approve(address(nttManagerWithExecutor), 1 * 10 ** decimals);
 
-        uint256 startingBalance = address(nttManagerWithExecutor).balance;
+        uint256 startingBalance = token.balanceOf(address(user_A));
+        uint256 nttManagerStartingBalance = address(nttManagerWithExecutor).balance;
+        uint256 amount = 1 * 10 ** decimals;
+        uint256 expectedFee = (amount * 1) / 100000;
 
         ExecutorArgs memory executorArgs = executor.createArgs(chainId2, 100);
+        FeeArgs memory feeArgs = FeeArgs({dbps: 1, payee: referrer});
         uint64 s1 = nttManagerWithExecutor.transfer{value: 10000}(
             address(nttManager),
-            1 * 10 ** decimals,
+            amount,
             chainId2,
             toWormholeFormat(user_B),
             toWormholeFormat(user_A),
             false,
             new bytes(1),
-            executorArgs
+            executorArgs,
+            feeArgs
         );
 
         assertEq(s1, 0);
 
-        uint256 endingBalance = address(nttManagerWithExecutor).balance;
-        assertEq(endingBalance, startingBalance);
+        uint256 endingBalance = token.balanceOf(address(user_A));
+        assertEq(endingBalance, startingBalance - amount);
+        uint256 nttManagerEndingBalance = address(nttManagerWithExecutor).balance;
+        assertEq(nttManagerEndingBalance, nttManagerStartingBalance);
+        assertEq(expectedFee, token.balanceOf(referrer));
     }
 
     function test_transferWithExecutorNoRateLimiting() public {
@@ -262,25 +272,33 @@ contract TestNttManagerWithExecutor is Test {
         nttManagerNoRateLimiting.setOutboundLimit(packTrimmedAmount(type(uint64).max, 8).untrim(decimals));
 
         vm.startPrank(user_A);
-        token.approve(address(nttManagerWithExecutor), 3 * 10 ** decimals);
+        token.approve(address(nttManagerWithExecutor), 1 * 10 ** decimals);
 
-        uint256 startingBalance = address(nttManagerWithExecutor).balance;
+        uint256 startingBalance = token.balanceOf(address(user_A));
+        uint256 nttManagerStartingBalance = address(nttManagerWithExecutor).balance;
+        uint256 amount = 1 * 10 ** decimals;
+        uint256 expectedFee = (amount * 1) / 100000;
 
         ExecutorArgs memory executorArgs = executor.createArgs(chainId2, 100);
+        FeeArgs memory feeArgs = FeeArgs({dbps: 1, payee: referrer});
         uint64 s1 = nttManagerWithExecutor.transfer{value: 10000}(
             address(nttManagerNoRateLimiting),
-            1 * 10 ** decimals,
+            amount,
             chainId2,
             toWormholeFormat(user_B),
             toWormholeFormat(user_A),
             false,
             new bytes(1),
-            executorArgs
+            executorArgs,
+            feeArgs
         );
 
         assertEq(s1, 0);
 
-        uint256 endingBalance = address(nttManagerWithExecutor).balance;
-        assertEq(endingBalance, startingBalance);
+        uint256 endingBalance = token.balanceOf(address(user_A));
+        assertEq(endingBalance, startingBalance - amount);
+        uint256 nttManagerEndingBalance = address(nttManagerWithExecutor).balance;
+        assertEq(nttManagerEndingBalance, nttManagerStartingBalance);
+        assertEq(expectedFee, token.balanceOf(referrer));
     }
 }

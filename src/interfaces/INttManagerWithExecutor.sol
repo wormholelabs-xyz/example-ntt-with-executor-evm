@@ -12,6 +12,13 @@ struct ExecutorArgs {
     bytes instructions;
 }
 
+struct FeeArgs {
+    // The fee in tenths of basis points.
+    uint16 dbps;
+    // To whom the fee should be paid (the "referrer").
+    address payee;
+}
+
 interface INttManagerWithExecutor {
     /// @notice Error when the refund to the sender fails.
     /// @dev Selector 0x2ca23714.
@@ -27,6 +34,7 @@ interface INttManagerWithExecutor {
     /// @param shouldQueue Whether the transfer should be queued if the outbound limit is hit.
     /// @param encodedInstructions Additional instructions to be forwarded to the recipient chain.
     /// @param executorArgs The arguments to be passed into the Executor.
+    /// @param feeArgs The arguments used to compute and pay the referrer fee.
     /// @return msgId The resulting message ID of the transfer
     function transfer(
         address nttManager,
@@ -36,6 +44,7 @@ interface INttManagerWithExecutor {
         bytes32 refundAddress,
         bool shouldQueue,
         bytes memory encodedInstructions,
-        ExecutorArgs calldata executorArgs
+        ExecutorArgs calldata executorArgs,
+        FeeArgs calldata feeArgs
     ) external payable returns (uint64 msgId);
 }

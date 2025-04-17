@@ -40,7 +40,8 @@ contract NttManagerWithExecutor is INttManagerWithExecutor {
         bytes32 refundAddress,
         bool shouldQueue,
         bytes memory encodedInstructions,
-        ExecutorArgs calldata executorArgs
+        ExecutorArgs calldata executorArgs,
+        FeeArgs calldata feeArgs
     ) external payable returns (uint64 msgId) {
         INttManager nttm = INttManager(nttManager);
 
@@ -48,12 +49,17 @@ contract NttManagerWithExecutor is INttManagerWithExecutor {
         // Not worrying about dust here since the `NttManager` will revert in that case.
         address token = nttm.token();
         amount = custodyTokens(token, amount);
-        SafeERC20.safeApprove(IERC20(token), nttManager, amount);
 
+        // Transfer the fee to the referrer.
+        amount = payFee(token, amount, feeArgs);
+
+        // Initiate the transfer.
+        SafeERC20.safeApprove(IERC20(token), nttManager, amount);
         msgId = nttm.transfer{value: msg.value - executorArgs.value}(
             amount, recipientChain, recipientAddress, refundAddress, shouldQueue, encodedInstructions
         );
 
+        // Generate the executor event.
         executor.requestExecution{value: executorArgs.value}(
             recipientChain,
             nttm.getPeer(recipientChain).peerAddress,
@@ -97,5 +103,16 @@ contract NttManagerWithExecutor is INttManagerWithExecutor {
         (, bytes memory queriedBalance) =
             token.staticcall(abi.encodeWithSelector(IERC20.balanceOf.selector, address(this)));
         balance = abi.decode(queriedBalance, (uint256));
+    }
+
+    // @dev The fee is calculated as a percentage of the amount being transferred.
+    function payFee(address token, uint256 amount, FeeArgs calldata feeArgs) internal returns (uint256) {
+        uint256 fee = (amount * feeArgs.dbps) / 100000;
+        if (fee > 0) {
+            // Don't need to check for fee greater than or equal to amount because it can never be (since dbps is a uint16).
+            amount -= fee;
+            SafeERC20.safeTransfer(IERC20(token), feeArgs.payee, fee);
+        }
+        return amount;
     }
 }
