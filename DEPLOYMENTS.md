@@ -2,7 +2,46 @@
 
 ## Testnet
 
-### March 18, 2025
+### April 17, 2025
+
+#### Version Info
+
+Commit Hash:
+
+<!-- cspell:disable -->
+
+```sh
+example-ntt-with-executor (main)$ git rev-parse HEAD
+736fbd1dfaf28d19120effbf3c4a063ed640cee8
+example-ntt-with-executor (main)$
+```
+
+<!-- cspell:enable -->
+
+Foundry Version:
+
+<!-- cspell:disable -->
+
+```sh
+evm (main)$ forge --version
+forge Version: 1.0.0-stable
+Commit SHA: e144b82070619b6e10485c38734b4d4d45aebe04
+Build Timestamp: 2025-02-13T20:03:31.026474817Z (1739477011)
+Build Profile: maxperf
+evm (main)$
+```
+
+<!-- cspell:enable -->
+
+#### Chains Deployed
+
+Here are the deployed contract addresses for each chain. The number after the chain name is the Wormhole chain ID configured for the contract.
+
+- Sepolia (10002): [0xB5F173b5167Cd7E67909a947fADD4b70FFa22759](https://sepolia.etherscan.io/address/0xB5F173b5167Cd7E67909a947fADD4b70FFa22759)
+- Base Sepolia (10004): [0x6E7d8fBcC2821084CA1de9b97931FF9fEDAeE57e](https://sepolia.basescan.org/address/0x6E7d8fBcC2821084CA1de9b97931FF9fEDAeE57e)
+- Avalanche Fuji (6): [0xFFe534e5d8bf7Ff8159765c5Ccc89E71B622CAff](https://testnet.snowtrace.io/address/0xFFe534e5d8bf7Ff8159765c5Ccc89E71B622CAff)
+
+### DEPRECATED: March 18, 2025
 
 #### Version Info
 
