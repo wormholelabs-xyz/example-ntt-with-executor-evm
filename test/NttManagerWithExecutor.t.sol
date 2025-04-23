@@ -301,4 +301,34 @@ contract TestNttManagerWithExecutor is Test {
         assertEq(nttManagerEndingBalance, nttManagerStartingBalance);
         assertEq(expectedFee, token.balanceOf(referrer));
     }
+
+    function test_calculateFee() public view {
+        assertEq(12345, nttManagerWithExecutor.calculateFee(123456, 10000));
+        assertEq(1234, nttManagerWithExecutor.calculateFee(123456, 1000));
+        assertEq(123, nttManagerWithExecutor.calculateFee(123456, 100));
+        assertEq(12, nttManagerWithExecutor.calculateFee(123456, 10));
+        assertEq(1, nttManagerWithExecutor.calculateFee(123456, 1));
+
+        // A zero fee is valid.
+        assertEq(0, nttManagerWithExecutor.calculateFee(123456, 0));
+
+        // A zero result is valid.
+        assertEq(0, nttManagerWithExecutor.calculateFee(1, 1));
+
+        // Try the max fee.
+        assertEq(80907406, nttManagerWithExecutor.calculateFee(123456789, type(uint16).max));
+
+        // Try the max amount
+        assertEq(
+            75884345681675168670837245025443620411640484450627543643258527679585869509531,
+            nttManagerWithExecutor.calculateFee(type(uint256).max, type(uint16).max)
+        );
+        assertEq(type(uint256).max / 100000, nttManagerWithExecutor.calculateFee(type(uint256).max, 1));
+        assertEq(0, nttManagerWithExecutor.calculateFee(type(uint256).max, 0));
+    }
+
+    // @dev This test verifies that the new calculation does not over/under flow.
+    function test_calculateFeeFuzz(uint256 amount, uint16 dbps) public view returns (uint256 fee) {
+        fee = nttManagerWithExecutor.calculateFee(amount, dbps);
+    }
 }

@@ -107,12 +107,20 @@ contract NttManagerWithExecutor is INttManagerWithExecutor {
 
     // @dev The fee is calculated as a percentage of the amount being transferred.
     function payFee(address token, uint256 amount, FeeArgs calldata feeArgs) internal returns (uint256) {
-        uint256 fee = (amount * feeArgs.dbps) / 100000;
+        uint256 fee = calculateFee(amount, feeArgs.dbps);
         if (fee > 0) {
             // Don't need to check for fee greater than or equal to amount because it can never be (since dbps is a uint16).
             amount -= fee;
             SafeERC20.safeTransfer(IERC20(token), feeArgs.payee, fee);
         }
         return amount;
+    }
+
+    function calculateFee(uint256 amount, uint16 dbps) public pure returns (uint256 fee) {
+        unchecked {
+            uint256 q = amount / 100000;
+            uint256 r = amount % 100000;
+            fee = q * dbps + (r * dbps) / 100000;
+        }
     }
 }
