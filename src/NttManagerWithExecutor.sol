@@ -71,11 +71,10 @@ contract NttManagerWithExecutor is INttManagerWithExecutor {
             executorArgs.instructions
         );
 
-        // Refund any excess value back to the caller.
-        // TODO: Not sure this is right.
+        // Refund any excess value.
         uint256 currentBalance = address(this).balance;
         if (currentBalance > 0) {
-            (bool refundSuccessful,) = payable(msg.sender).call{value: currentBalance}("");
+            (bool refundSuccessful,) = payable(executorArgs.refundAddress).call{value: currentBalance}("");
             if (!refundSuccessful) {
                 revert RefundFailed(currentBalance);
             }
