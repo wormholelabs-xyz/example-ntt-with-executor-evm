@@ -41,7 +41,6 @@ contract NttManagerWithExecutor is INttManagerWithExecutor {
         uint16 recipientChain,
         bytes32 recipientAddress,
         bytes32 refundAddress,
-        bool shouldQueue,
         bytes memory encodedInstructions,
         ExecutorArgs calldata executorArgs,
         FeeArgs calldata feeArgs
@@ -59,7 +58,7 @@ contract NttManagerWithExecutor is INttManagerWithExecutor {
         // Initiate the transfer.
         SafeERC20.safeApprove(IERC20(token), nttManager, amount);
         msgId = nttm.transfer{value: msg.value - executorArgs.value}(
-            amount, recipientChain, recipientAddress, refundAddress, shouldQueue, encodedInstructions
+            amount, recipientChain, recipientAddress, refundAddress, false, encodedInstructions
         );
 
         // Generate the executor event.

@@ -254,7 +254,6 @@ contract TestNttManagerWithExecutor is Test {
             chainId2,
             toWormholeFormat(user_B),
             toWormholeFormat(user_A),
-            false,
             new bytes(1),
             executorArgs,
             feeArgs
@@ -293,7 +292,6 @@ contract TestNttManagerWithExecutor is Test {
             chainId2,
             toWormholeFormat(user_B),
             toWormholeFormat(user_A),
-            false,
             new bytes(1),
             executorArgs,
             feeArgs

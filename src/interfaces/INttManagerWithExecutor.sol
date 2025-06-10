@@ -34,7 +34,6 @@ interface INttManagerWithExecutor {
     /// @param recipientChain The Wormhole chain ID for the destination.
     /// @param recipientAddress The recipient address.
     /// @param refundAddress The address to which a refund for unussed gas is issued on the recipient chain.
-    /// @param shouldQueue Whether the transfer should be queued if the outbound limit is hit.
     /// @param encodedInstructions Additional instructions to be forwarded to the recipient chain.
     /// @param executorArgs The arguments to be passed into the Executor.
     /// @param feeArgs The arguments used to compute and pay the referrer fee.
@@ -45,7 +44,6 @@ interface INttManagerWithExecutor {
         uint16 recipientChain,
         bytes32 recipientAddress,
         bytes32 refundAddress,
-        bool shouldQueue,
         bytes memory encodedInstructions,
         ExecutorArgs calldata executorArgs,
         FeeArgs calldata feeArgs
