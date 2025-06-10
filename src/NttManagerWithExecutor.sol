@@ -17,6 +17,9 @@ string constant nttManagerWithExecutorVersion = "NttManagerWithExecutor-0.0.1";
 /// @notice The NttManagerWithExecutor contract is a shim contract that initiates
 ///         an NTT transfer using the executor for relaying.
 contract NttManagerWithExecutor is INttManagerWithExecutor {
+    using TrimmedAmountLib for uint256;
+    using TrimmedAmountLib for TrimmedAmount;
+
     uint16 public immutable chainId;
     IExecutor public immutable executor;
 
@@ -51,7 +54,7 @@ contract NttManagerWithExecutor is INttManagerWithExecutor {
         amount = custodyTokens(token, amount);
 
         // Transfer the fee to the referrer.
-        amount = payFee(token, amount, feeArgs);
+        amount = payFee(token, amount, feeArgs, nttm, recipientChain);
 
         // Initiate the transfer.
         SafeERC20.safeApprove(IERC20(token), nttManager, amount);
@@ -105,8 +108,15 @@ contract NttManagerWithExecutor is INttManagerWithExecutor {
     }
 
     // @dev The fee is calculated as a percentage of the amount being transferred.
-    function payFee(address token, uint256 amount, FeeArgs calldata feeArgs) internal returns (uint256) {
+    function payFee(
+        address token,
+        uint256 amount,
+        FeeArgs calldata feeArgs,
+        INttManager nttManager,
+        uint16 recipientChain
+    ) internal returns (uint256) {
         uint256 fee = calculateFee(amount, feeArgs.dbps);
+        fee = trimFee(nttManager, fee, recipientChain);
         if (fee > 0) {
             // Don't need to check for fee greater than or equal to amount because it can never be (since dbps is a uint16).
             amount -= fee;
@@ -121,5 +131,17 @@ contract NttManagerWithExecutor is INttManagerWithExecutor {
             uint256 r = amount % 100000;
             fee = q * dbps + (r * dbps) / 100000;
         }
+    }
+
+    function trimFee(INttManager nttManager, uint256 amount, uint16 toChain) internal view returns (uint256 newFee) {
+        uint8 toDecimals = nttManager.getPeer(toChain).tokenDecimals;
+
+        if (toDecimals == 0) {
+            revert InvalidPeerDecimals();
+        }
+
+        uint8 fromDecimals = nttManager.tokenDecimals();
+        TrimmedAmount trimmedAmount = amount.trim(fromDecimals, toDecimals);
+        newFee = trimmedAmount.untrim(fromDecimals);
     }
 }

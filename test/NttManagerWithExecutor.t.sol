@@ -227,9 +227,10 @@ contract TestNttManagerWithExecutor is Test {
     function test_transferWithExecutor() public {
         MockToken token = MockToken(nttManager.token());
         uint8 decimals = token.decimals();
+        uint8 peerDecimals = 9;
         token.mintDummy(address(user_A), 5 * 10 ** decimals);
 
-        nttManager.setPeer(chainId2, toWormholeFormat(address(0x1)), 9, type(uint64).max);
+        nttManager.setPeer(chainId2, toWormholeFormat(address(0x1)), peerDecimals, type(uint64).max);
         nttManager.setOutboundLimit(packTrimmedAmount(type(uint64).max, 8).untrim(decimals));
 
         vm.startPrank(user_A);
@@ -237,11 +238,16 @@ contract TestNttManagerWithExecutor is Test {
 
         uint256 startingBalance = token.balanceOf(address(user_A));
         uint256 nttManagerStartingBalance = address(nttManagerWithExecutor).balance;
-        uint256 amount = 1 * 10 ** decimals;
-        uint256 expectedFee = (amount * 1) / 100000;
+        uint256 amount = 123000000000000;
+
+        uint16 dbps = 100;
+        uint256 expectedFee = nttManagerWithExecutor.calculateFee(amount, dbps);
+
+        // The combination of this amount and dbps gives us a fee with dust. Remove that from the expected fee.
+        expectedFee = expectedFee.trim(decimals, peerDecimals).untrim(decimals);
 
         ExecutorArgs memory executorArgs = executor.createArgs(chainId2, 100);
-        FeeArgs memory feeArgs = FeeArgs({dbps: 1, payee: referrer});
+        FeeArgs memory feeArgs = FeeArgs({dbps: dbps, payee: referrer});
         uint64 s1 = nttManagerWithExecutor.transfer{value: 10000}(
             address(nttManager),
             amount,

@@ -25,6 +25,9 @@ interface INttManagerWithExecutor {
     /// @param refundAmount The refund amount.
     error RefundFailed(uint256 refundAmount);
 
+    /// @notice Peer cannot have zero decimals.
+    error InvalidPeerDecimals();
+
     /// @notice Transfer a given amount to a recipient on a given chain using the Executor for relaying.
     /// @param nttManager The NTT manager used for the transfer.
     /// @param amount The amount to transfer.
