@@ -51,7 +51,50 @@ Here are the deployed contract addresses for each chain. The number after the ch
 
 ## Testnet
 
-### May 27, 2025
+### June 10, 2025
+
+This version fixes a dust issue in the fee calculation.
+
+#### Version Info
+
+Commit Hash:
+
+<!-- cspell:disable -->
+
+```sh
+example-ntt-with-executor (main)$ git rev-parse HEAD
+e2ced94dc187e6885fc1d53068c6e12bbfeec5ee
+example-ntt-with-executor (main)$ git branch
+```
+
+<!-- cspell:enable -->
+
+Foundry Version:
+
+<!-- cspell:disable -->
+
+```sh
+evm (main)$ forge --version
+forge Version: 1.2.1-stable
+Commit SHA: 42341d5c94947d566c21a539aead92c4c53837a2
+Build Timestamp: 2025-05-26T05:24:48.799227114Z (1748237088)
+Build Profile: maxperf
+evm (main)$
+```
+
+<!-- cspell:enable -->
+
+#### Chains Deployed
+
+Here are the deployed contract addresses for each chain. The number after the chain name is the Wormhole chain ID configured for the contract.
+
+- Sepolia (10002): [0x54DD7080aE169DD923fE56d0C4f814a0a17B8f41](https://sepolia.etherscan.io/address/0x54DD7080aE169DD923fE56d0C4f814a0a17B8f41)
+- Base Sepolia (10004): [0x5845E08d890E21687F7Ebf7CbAbD360cD91c6245](https://sepolia.basescan.org/address/0x5845E08d890E21687F7Ebf7CbAbD360cD91c6245)
+- Avalanche Fuji (6): [0x4e9Af03fbf1aa2b79A2D4babD3e22e09f18Bb8EE](https://testnet.snowtrace.io/address/0x4e9Af03fbf1aa2b79A2D4babD3e22e09f18Bb8EE)
+- Sei EVM (40): [0x3F2D6441C7a59Dfe80f8e14142F9E28F6D440445](https://seitrace.com/?chain=atlantic-2/address/0x3F2D6441C7a59Dfe80f8e14142F9E28F6D440445)
+- Converge (53): [0x3d8c26b67BDf630FBB44F09266aFA735F1129197](https://explorer-converge-testnet-1.t.conduit.xyz/address/0x3d8c26b67BDf630FBB44F09266aFA735F1129197)
+
+### DEPRECATED: May 27, 2025
 
 This version fixes a possible overflow in the fee calculation.
 
@@ -94,7 +137,7 @@ Here are the deployed contract addresses for each chain. The number after the ch
 - Base Sepolia (10004): [0x49D2c608Ae52b456A3896efa296e4F555f5BE480](https://sepolia.basescan.org/address/0x49D2c608Ae52b456A3896efa296e4F555f5BE480)
 - Avalanche Fuji (6): [0x246E3968dA8f9aA3608BAa9FdBe83c8EB6B51671](https://testnet.snowtrace.io/address/0x246E3968dA8f9aA3608BAa9FdBe83c8EB6B51671)
 
-### April 17, 2025
+### DEPRECATED: April 17, 2025
 
 #### Version Info
 
