@@ -1,66 +1,13 @@
-## Foundry
+# Example NTT With Executor EVM
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+This repo contains an EVM helper contract for bundling an [NTT](https://github.com/wormhole-foundation/native-token-transfers) transfer with an [Executor](https://github.com/wormholelabs-xyz/example-messaging-executor) request for execution in a single transaction.
 
-Foundry consists of:
+For the SVM (Solana) contract, see https://github.com/wormholelabs-xyz/example-ntt-with-executor-svm
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+Deployments can be found at https://wormholelabs.notion.site/Executor-Addresses-Public-1f93029e88cb80df940eeb8867a01081
 
-## Documentation
-
-https://book.getfoundry.sh/
-
-## Usage
-
-### Build
-
-```shell
-$ forge build
-```
-
-### Test
-
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+⚠ **This software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+implied. See the License for the specific language governing permissions and limitations under the License.** Or plainly
+spoken - this is a very complex piece of software which targets a bleeding-edge, experimental smart contract runtime.
+Mistakes happen, and no matter how hard you try and whether you pay someone to audit it, it may eat your tokens, set
+your printer on fire or startle your cat. Cryptocurrencies are a high-risk investment, no matter how fancy.
