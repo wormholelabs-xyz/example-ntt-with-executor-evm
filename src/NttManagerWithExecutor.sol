@@ -9,6 +9,7 @@ import "example-messaging-executor/evm/src/libraries/ExecutorMessages.sol";
 import "native-token-transfers/evm/src/interfaces/INttManager.sol";
 
 import "./interfaces/INttManagerWithExecutor.sol";
+import "./interfaces/INttManagerWethUnwrap.sol";
 
 string constant nttManagerWithExecutorVersion = "NttManagerWithExecutor-0.0.1";
 
@@ -55,9 +56,68 @@ contract NttManagerWithExecutor is INttManagerWithExecutor {
         // Transfer the fee to the referrer.
         amount = payFee(token, amount, feeArgs, nttm, recipientChain);
 
+        // Approve the bridge to spend the tokens.
+        _maxApproveIfNeeded(token, nttManager, amount);
+
         // Initiate the transfer.
-        SafeERC20.safeApprove(IERC20(token), nttManager, amount);
         msgId = nttm.transfer{value: msg.value - executorArgs.value}(
+            amount, recipientChain, recipientAddress, refundAddress, false, encodedInstructions
+        );
+
+        // Generate the executor event.
+        executor.requestExecution{value: executorArgs.value}(
+            recipientChain,
+            nttm.getPeer(recipientChain).peerAddress,
+            executorArgs.refundAddress,
+            executorArgs.signedQuote,
+            ExecutorMessages.makeNTTv1Request(
+                chainId, bytes32(uint256(uint160(address(nttm)))), bytes32(uint256(msgId))
+            ),
+            executorArgs.instructions
+        );
+
+        // Refund any excess value.
+        uint256 currentBalance = address(this).balance;
+        if (currentBalance > 0) {
+            (bool refundSuccessful,) = payable(executorArgs.refundAddress).call{value: currentBalance}("");
+            if (!refundSuccessful) {
+                revert RefundFailed(currentBalance);
+            }
+        }
+    }
+
+    /// @inheritdoc INttManagerWithExecutor
+    function transferETH(
+        address nttManager,
+        uint256 amount,
+        uint16 recipientChain,
+        bytes32 recipientAddress,
+        bytes32 refundAddress,
+        bytes memory encodedInstructions,
+        ExecutorArgs calldata executorArgs,
+        FeeArgs calldata feeArgs
+    ) external payable returns (uint64 msgId) {
+        INttManagerWethUnwrap nttm = INttManagerWethUnwrap(nttManager);
+        IWETH weth = nttm.weth();
+        address token = address(weth);
+        require(token != address(0), "WETH does not exist");
+
+        // This requires the amount + wormhole fee + executionAmount to exactly equal msg.value
+        // because `transferTokensWithRelay` will revert if there is any extra.
+        require(msg.value >= amount + executorArgs.value, "Not enough msg value");
+        uint256 remainingValue = msg.value - (amount + executorArgs.value);
+
+        // Deposit the amount to be transferred into WETH.
+        weth.deposit{value: amount}();
+
+        // Transfer the fee to the referrer.
+        amount = payFee(token, amount, feeArgs, nttm, recipientChain);
+
+        // Approve the bridge to spend the tokens.
+        _maxApproveIfNeeded(token, nttManager, amount);
+
+        // Initiate the transfer.
+        msgId = nttm.transfer{value: remainingValue}(
             amount, recipientChain, recipientAddress, refundAddress, false, encodedInstructions
         );
 
@@ -142,5 +202,15 @@ contract NttManagerWithExecutor is INttManagerWithExecutor {
         uint8 fromDecimals = nttManager.tokenDecimals();
         TrimmedAmount trimmedAmount = amount.trim(fromDecimals, toDecimals);
         newFee = trimmedAmount.untrim(fromDecimals);
+    }
+
+    /// @dev This is based on what is in the MayanForwarder contract here: https://github.com/mayan-finance/swap-bridge/blob/main/src/MayanForwarder.sol
+    function _maxApproveIfNeeded(address tokenAddr, address spender, uint256 amount) internal {
+        IERC20 token = IERC20(tokenAddr);
+        uint256 currentAllowance = token.allowance(address(this), spender);
+        if (currentAllowance < amount) {
+            SafeERC20.safeApprove(token, spender, 0);
+            SafeERC20.safeApprove(token, spender, type(uint256).max);
+        }
     }
 }
