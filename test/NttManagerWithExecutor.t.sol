@@ -228,9 +228,97 @@ contract TestNttManagerWithExecutor is Test {
         MockToken token = MockToken(nttManager.token());
         uint8 decimals = token.decimals();
         uint8 peerDecimals = 9;
+        uint256 transferTokenFee = 1;
+        uint256 nativeTokenFee = 2;
         token.mintDummy(address(user_A), 5 * 10 ** decimals);
 
         nttManager.setPeer(chainId2, toWormholeFormat(address(0x1)), peerDecimals, type(uint64).max);
+        nttManager.setOutboundLimit(packTrimmedAmount(type(uint64).max, 8).untrim(decimals));
+
+        vm.startPrank(user_A);
+        token.approve(address(nttManagerWithExecutor), 1 * 10 ** decimals + transferTokenFee);
+
+        uint256 startingBalance = token.balanceOf(address(user_A));
+        uint256 nttManagerStartingBalance = address(nttManagerWithExecutor).balance;
+        uint256 amount = 123000000000000;
+
+        uint256 expectedTokenFee = transferTokenFee;
+        uint256 expectedNativeFee = address(referrer).balance + nativeTokenFee;
+
+        ExecutorArgs memory executorArgs = executor.createArgs(chainId2, 100);
+        FeeArgs memory feeArgs =
+            FeeArgs({transferTokenFee: transferTokenFee, nativeTokenFee: nativeTokenFee, payee: referrer});
+        uint64 s1 = nttManagerWithExecutor.transfer{value: 10000}(
+            address(nttManager),
+            amount,
+            chainId2,
+            toWormholeFormat(user_B),
+            toWormholeFormat(user_A),
+            new bytes(1),
+            executorArgs,
+            feeArgs
+        );
+
+        assertEq(s1, 0);
+
+        uint256 endingBalance = token.balanceOf(address(user_A));
+        assertEq(endingBalance, startingBalance - amount - transferTokenFee);
+        uint256 nttManagerEndingBalance = address(nttManagerWithExecutor).balance;
+        assertEq(nttManagerEndingBalance, nttManagerStartingBalance);
+        assertEq(expectedTokenFee, token.balanceOf(referrer));
+        assertEq(expectedNativeFee, address(referrer).balance);
+    }
+
+    function test_transferWithExecutorNoRateLimiting() public {
+        MockToken token = MockToken(nttManagerNoRateLimiting.token());
+        uint8 decimals = token.decimals();
+        uint256 transferTokenFee = 1;
+        uint256 nativeTokenFee = 2;
+        token.mintDummy(address(user_A), 5 * 10 ** decimals);
+
+        nttManagerNoRateLimiting.setPeer(chainId2, toWormholeFormat(address(0x1)), 9, type(uint64).max);
+        nttManagerNoRateLimiting.setOutboundLimit(packTrimmedAmount(type(uint64).max, 8).untrim(decimals));
+
+        vm.startPrank(user_A);
+        token.approve(address(nttManagerWithExecutor), 1 * 10 ** decimals + transferTokenFee);
+
+        uint256 startingBalance = token.balanceOf(address(user_A));
+        uint256 nttManagerStartingBalance = address(nttManagerWithExecutor).balance;
+        uint256 amount = 1 * 10 ** decimals;
+
+        uint256 expectedTokenFee = transferTokenFee;
+        uint256 expectedNativeFee = address(referrer).balance + nativeTokenFee;
+
+        ExecutorArgs memory executorArgs = executor.createArgs(chainId2, 100);
+        FeeArgs memory feeArgs =
+            FeeArgs({transferTokenFee: transferTokenFee, nativeTokenFee: nativeTokenFee, payee: referrer});
+        uint64 s1 = nttManagerWithExecutor.transfer{value: 10000}(
+            address(nttManagerNoRateLimiting),
+            amount,
+            chainId2,
+            toWormholeFormat(user_B),
+            toWormholeFormat(user_A),
+            new bytes(1),
+            executorArgs,
+            feeArgs
+        );
+
+        assertEq(s1, 0);
+
+        uint256 endingBalance = token.balanceOf(address(user_A));
+        assertEq(endingBalance, startingBalance - amount - transferTokenFee);
+        uint256 nttManagerEndingBalance = address(nttManagerWithExecutor).balance;
+        assertEq(nttManagerEndingBalance, nttManagerStartingBalance);
+        assertEq(expectedTokenFee, token.balanceOf(referrer));
+        assertEq(expectedNativeFee, address(referrer).balance);
+    }
+
+    function test_transferWithExecutorNoFee() public {
+        MockToken token = MockToken(nttManager.token());
+        uint8 decimals = token.decimals();
+        token.mintDummy(address(user_A), 5 * 10 ** decimals);
+
+        nttManager.setPeer(chainId2, toWormholeFormat(address(0x1)), 9, type(uint64).max);
         nttManager.setOutboundLimit(packTrimmedAmount(type(uint64).max, 8).untrim(decimals));
 
         vm.startPrank(user_A);
@@ -238,16 +326,10 @@ contract TestNttManagerWithExecutor is Test {
 
         uint256 startingBalance = token.balanceOf(address(user_A));
         uint256 nttManagerStartingBalance = address(nttManagerWithExecutor).balance;
-        uint256 amount = 123000000000000;
-
-        uint16 dbps = 100;
-        uint256 expectedFee = nttManagerWithExecutor.calculateFee(amount, dbps);
-
-        // The combination of this amount and dbps gives us a fee with dust. Remove that from the expected fee.
-        expectedFee = expectedFee.trim(decimals, peerDecimals).untrim(decimals);
+        uint256 amount = 1 * 10 ** decimals;
 
         ExecutorArgs memory executorArgs = executor.createArgs(chainId2, 100);
-        FeeArgs memory feeArgs = FeeArgs({dbps: dbps, payee: referrer});
+        FeeArgs memory feeArgs = FeeArgs({transferTokenFee: 0, nativeTokenFee: 0, payee: address(0)});
         uint64 s1 = nttManagerWithExecutor.transfer{value: 10000}(
             address(nttManager),
             amount,
@@ -265,74 +347,5 @@ contract TestNttManagerWithExecutor is Test {
         assertEq(endingBalance, startingBalance - amount);
         uint256 nttManagerEndingBalance = address(nttManagerWithExecutor).balance;
         assertEq(nttManagerEndingBalance, nttManagerStartingBalance);
-        assertEq(expectedFee, token.balanceOf(referrer));
-    }
-
-    function test_transferWithExecutorNoRateLimiting() public {
-        MockToken token = MockToken(nttManagerNoRateLimiting.token());
-        uint8 decimals = token.decimals();
-        token.mintDummy(address(user_A), 5 * 10 ** decimals);
-
-        nttManagerNoRateLimiting.setPeer(chainId2, toWormholeFormat(address(0x1)), 9, type(uint64).max);
-        nttManagerNoRateLimiting.setOutboundLimit(packTrimmedAmount(type(uint64).max, 8).untrim(decimals));
-
-        vm.startPrank(user_A);
-        token.approve(address(nttManagerWithExecutor), 1 * 10 ** decimals);
-
-        uint256 startingBalance = token.balanceOf(address(user_A));
-        uint256 nttManagerStartingBalance = address(nttManagerWithExecutor).balance;
-        uint256 amount = 1 * 10 ** decimals;
-        uint256 expectedFee = (amount * 1) / 100000;
-
-        ExecutorArgs memory executorArgs = executor.createArgs(chainId2, 100);
-        FeeArgs memory feeArgs = FeeArgs({dbps: 1, payee: referrer});
-        uint64 s1 = nttManagerWithExecutor.transfer{value: 10000}(
-            address(nttManagerNoRateLimiting),
-            amount,
-            chainId2,
-            toWormholeFormat(user_B),
-            toWormholeFormat(user_A),
-            new bytes(1),
-            executorArgs,
-            feeArgs
-        );
-
-        assertEq(s1, 0);
-
-        uint256 endingBalance = token.balanceOf(address(user_A));
-        assertEq(endingBalance, startingBalance - amount);
-        uint256 nttManagerEndingBalance = address(nttManagerWithExecutor).balance;
-        assertEq(nttManagerEndingBalance, nttManagerStartingBalance);
-        assertEq(expectedFee, token.balanceOf(referrer));
-    }
-
-    function test_calculateFee() public view {
-        assertEq(12345, nttManagerWithExecutor.calculateFee(123456, 10000));
-        assertEq(1234, nttManagerWithExecutor.calculateFee(123456, 1000));
-        assertEq(123, nttManagerWithExecutor.calculateFee(123456, 100));
-        assertEq(12, nttManagerWithExecutor.calculateFee(123456, 10));
-        assertEq(1, nttManagerWithExecutor.calculateFee(123456, 1));
-
-        // A zero fee is valid.
-        assertEq(0, nttManagerWithExecutor.calculateFee(123456, 0));
-
-        // A zero result is valid.
-        assertEq(0, nttManagerWithExecutor.calculateFee(1, 1));
-
-        // Try the max fee.
-        assertEq(80907406, nttManagerWithExecutor.calculateFee(123456789, type(uint16).max));
-
-        // Try the max amount
-        assertEq(
-            75884345681675168670837245025443620411640484450627543643258527679585869509531,
-            nttManagerWithExecutor.calculateFee(type(uint256).max, type(uint16).max)
-        );
-        assertEq(type(uint256).max / 100000, nttManagerWithExecutor.calculateFee(type(uint256).max, 1));
-        assertEq(0, nttManagerWithExecutor.calculateFee(type(uint256).max, 0));
-    }
-
-    // @dev This test verifies that the new calculation does not over/under flow.
-    function test_calculateFeeFuzz(uint256 amount, uint16 dbps) public view returns (uint256 fee) {
-        fee = nttManagerWithExecutor.calculateFee(amount, dbps);
     }
 }

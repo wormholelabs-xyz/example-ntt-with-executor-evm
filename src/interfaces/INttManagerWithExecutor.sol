@@ -13,8 +13,11 @@ struct ExecutorArgs {
 }
 
 struct FeeArgs {
-    // The fee in tenths of basis points.
-    uint16 dbps;
+    // The fee taken in the token being transferred.
+    // This is *in addition to* the amount.
+    uint256 transferTokenFee;
+    // The fee taken in the native token.
+    uint256 nativeTokenFee;
     // To whom the fee should be paid (the "referrer").
     address payee;
 }
@@ -25,8 +28,10 @@ interface INttManagerWithExecutor {
     /// @param refundAmount The refund amount.
     error RefundFailed(uint256 refundAmount);
 
-    /// @notice Peer cannot have zero decimals.
-    error InvalidPeerDecimals();
+    /// @notice Error when the payment to the payee fails.
+    /// @dev Selector 0x1e67017f.
+    /// @param feeAmount The fee amount.
+    error PaymentFailed(uint256 feeAmount);
 
     /// @notice Transfer a given amount to a recipient on a given chain using the Executor for relaying.
     /// @param nttManager The NTT manager used for the transfer.
