@@ -9,15 +9,18 @@ import "example-messaging-executor/evm/src/libraries/ExecutorMessages.sol";
 import "native-token-transfers/evm/src/interfaces/INttManager.sol";
 
 import "./interfaces/INttManagerWithExecutor.sol";
-import "./interfaces/INttManagerWethUnwrap.sol";
+import "../interfaces/INttManagerWethUnwrap.sol";
 
-string constant nttManagerWithExecutorVersion = "NttManagerWithExecutor-0.0.2";
+string constant nttManagerWithExecutorVersion = "NttManagerWithExecutor-0.0.1";
 
 /// @title NttManagerWithExecutor
 /// @author Wormhole Project Contributors.
 /// @notice The NttManagerWithExecutor contract is a shim contract that initiates
 ///         an NTT transfer using the executor for relaying.
 contract NttManagerWithExecutor is INttManagerWithExecutor {
+    using TrimmedAmountLib for uint256;
+    using TrimmedAmountLib for TrimmedAmount;
+
     uint16 public immutable chainId;
     IExecutor public immutable executor;
 
@@ -50,14 +53,14 @@ contract NttManagerWithExecutor is INttManagerWithExecutor {
         address token = nttm.token();
         amount = custodyTokens(token, amount);
 
-        // Transfer the fees to the referrer.
-        payFee(token, feeArgs);
+        // Transfer the fee to the referrer.
+        amount = payFee(token, amount, feeArgs, nttm, recipientChain);
 
         // Approve the bridge to spend the tokens.
         _maxApproveIfNeeded(token, nttManager, amount);
 
         // Initiate the transfer.
-        msgId = nttm.transfer{value: msg.value - executorArgs.value - feeArgs.nativeTokenFee}(
+        msgId = nttm.transfer{value: msg.value - executorArgs.value}(
             amount, recipientChain, recipientAddress, refundAddress, false, encodedInstructions
         );
 
@@ -99,15 +102,16 @@ contract NttManagerWithExecutor is INttManagerWithExecutor {
         address token = address(weth);
         require(token != address(0), "WETH does not exist");
 
-        // This requires the amount + wormhole fee + executionAmount + nativeTokenFee to be covered by msg.value.
-        require(msg.value >= amount + executorArgs.value + feeArgs.nativeTokenFee, "Not enough msg value");
-        uint256 remainingValue = msg.value - (amount + executorArgs.value + feeArgs.nativeTokenFee);
+        // This requires the amount + wormhole fee + executionAmount to exactly equal msg.value
+        // because `transferTokensWithRelay` will revert if there is any extra.
+        require(msg.value >= amount + executorArgs.value, "Not enough msg value");
+        uint256 remainingValue = msg.value - (amount + executorArgs.value);
 
         // Deposit the amount to be transferred into WETH.
         weth.deposit{value: amount}();
 
-        // Transfer the fees to the referrer.
-        payFee(token, feeArgs);
+        // Transfer the fee to the referrer.
+        amount = payFee(token, amount, feeArgs, nttm, recipientChain);
 
         // Approve the bridge to spend the tokens.
         _maxApproveIfNeeded(token, nttManager, amount);
@@ -162,19 +166,42 @@ contract NttManagerWithExecutor is INttManagerWithExecutor {
         balance = abi.decode(queriedBalance, (uint256));
     }
 
-    // @dev The fee is taken in addition to the amount being transferred.
-    function payFee(address token, FeeArgs calldata feeArgs) internal {
-        if (feeArgs.transferTokenFee > 0) {
-            // custody separately in case the amount after transfer doesn't match
-            uint256 fee = custodyTokens(token, feeArgs.transferTokenFee);
+    // @dev The fee is calculated as a percentage of the amount being transferred.
+    function payFee(
+        address token,
+        uint256 amount,
+        FeeArgs calldata feeArgs,
+        INttManager nttManager,
+        uint16 recipientChain
+    ) internal returns (uint256) {
+        uint256 fee = calculateFee(amount, feeArgs.dbps);
+        fee = trimFee(nttManager, fee, recipientChain);
+        if (fee > 0) {
+            // Don't need to check for fee greater than or equal to amount because it can never be (since dbps is a uint16).
+            amount -= fee;
             SafeERC20.safeTransfer(IERC20(token), feeArgs.payee, fee);
         }
-        if (feeArgs.nativeTokenFee > 0) {
-            (bool paymentSuccessful,) = payable(feeArgs.payee).call{value: feeArgs.nativeTokenFee}("");
-            if (!paymentSuccessful) {
-                revert PaymentFailed(feeArgs.nativeTokenFee);
-            }
+        return amount;
+    }
+
+    function calculateFee(uint256 amount, uint16 dbps) public pure returns (uint256 fee) {
+        unchecked {
+            uint256 q = amount / 100000;
+            uint256 r = amount % 100000;
+            fee = q * dbps + (r * dbps) / 100000;
         }
+    }
+
+    function trimFee(INttManager nttManager, uint256 amount, uint16 toChain) internal view returns (uint256 newFee) {
+        uint8 toDecimals = nttManager.getPeer(toChain).tokenDecimals;
+
+        if (toDecimals == 0) {
+            revert InvalidPeerDecimals();
+        }
+
+        uint8 fromDecimals = nttManager.tokenDecimals();
+        TrimmedAmount trimmedAmount = amount.trim(fromDecimals, toDecimals);
+        newFee = trimmedAmount.untrim(fromDecimals);
     }
 
     /// @dev This is based on what is in the MayanForwarder contract here: https://github.com/mayan-finance/swap-bridge/blob/main/src/MayanForwarder.sol
