@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache 2
 pragma solidity ^0.8.19;
 
-import {FeeArgs} from "./INttManagerWithExecutor.sol";
+import {FeeArgs} from "../v2/interfaces/INttManagerWithExecutor.sol";
 
 struct ExecutorWithTokenArgs {
     // The msg value to be passed into the Executor (e.g. for Wormhole fees).
